@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(0, 0%, 9%);
+  --muted: hsl(0, 0%, 96%);
+  --muted-foreground: hsl(0, 0%, 45%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(0, 0%, 9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(0, 0%, 9%);
+  --border: hsl(0, 0%, 89%);
+  --input: hsl(0, 0%, 89%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(158, 64%, 52%);
+  --secondary-foreground: hsl(0, 0%, 9%);
+  --accent: hsl(0, 0%, 96%);
+  --accent-foreground: hsl(0, 0%, 9%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(217, 91%, 60%);
+  --radius: 0.5rem;
+
+  /* Political theme colors */
+  --primary-light: hsl(217, 91%, 70%);
+  --primary-dark: hsl(217, 91%, 50%);
+  --neutral-50: hsl(210, 40%, 98%);
+  --neutral-100: hsl(210, 40%, 96%);
+  --neutral-200: hsl(214, 32%, 91%);
+  --neutral-500: hsl(215, 16%, 47%);
+  --neutral-700: hsl(215, 25%, 27%);
+  --neutral-900: hsl(222, 84%, 5%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 5%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(222, 84%, 5%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 84%, 5%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(217, 91%, 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .hero-gradient {
+    background: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(217, 91%, 70%) 100%);
+  }
+  
+  .news-card-hover {
+    @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300;
+  }
+  
+  .political-primary {
+    background-color: hsl(217, 91%, 60%);
+  }
+  
+  .political-primary-light {
+    background-color: hsl(217, 91%, 70%);
+  }
+  
+  .political-primary-dark {
+    background-color: hsl(217, 91%, 50%);
+  }
+  
+  .political-secondary {
+    background-color: hsl(158, 64%, 52%);
+  }
+}

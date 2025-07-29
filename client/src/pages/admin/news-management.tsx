@@ -56,18 +56,18 @@ export default function NewsManagement() {
   });
 
   // Fetch all news
-  const { data: allNews = [], isLoading } = useQuery({
+  const { data: allNews = [], isLoading } = useQuery<News[]>({
     queryKey: ["/api/news"],
   });
 
   // Fetch states
-  const { data: states = [] } = useQuery({
+  const { data: states = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ["/api/states"],
   });
 
   // Fetch municipalities
   const selectedState = form.watch("state");
-  const { data: municipalities = [] } = useQuery({
+  const { data: municipalities = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ["/api/states", selectedState, "municipalities"],
     enabled: !!selectedState,
   });
@@ -155,7 +155,7 @@ export default function NewsManagement() {
 
   const onSubmit = (data: NewsFormData) => {
     if (editingNews) {
-      updateMutation.mutate({ id: editingNews.id, data });
+      updateMutation.mutate({ id: editingNews.id!, data });
     } else {
       createMutation.mutate(data);
     }
@@ -315,7 +315,7 @@ export default function NewsManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="nacional">Nacional</SelectItem>
+                              <SelectItem key="nacional" value="nacional">Nacional</SelectItem>
                               {states.map((state: any) => (
                                 <SelectItem key={state.id} value={state.id}>
                                   {state.name}
@@ -347,9 +347,9 @@ export default function NewsManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="todo-estado">Todo o Estado</SelectItem>
+                              <SelectItem key="todo-estado" value="todo-estado">Todo o Estado</SelectItem>
                               {municipalities.map((municipality: any) => (
-                                <SelectItem key={municipality.id} value={municipality.name}>
+                                <SelectItem key={municipality.id || municipality.name} value={municipality.name}>
                                   {municipality.name}
                                 </SelectItem>
                               ))}
@@ -461,7 +461,7 @@ export default function NewsManagement() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleDeleteNews(news.id)}
+                        onClick={() => handleDeleteNews(news.id!)}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={14} className="mr-1" />

@@ -1,10 +1,4 @@
 import {
-  users,
-  news,
-  comments,
-  requests,
-  states,
-  municipalities,
   type User,
   type InsertUser,
   type News,
@@ -16,8 +10,24 @@ import {
   type State,
   type Municipality,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, and, like, count } from "drizzle-orm";
+import { connectToDatabase } from "./db";
+import { ObjectId } from "mongodb";
+
+// Helper function to convert MongoDB documents to frontend-compatible format
+function convertDocument<T extends { _id?: any }>(doc: T): T {
+  if (doc && doc._id) {
+    return {
+      ...doc,
+      _id: doc._id.toString(),
+      id: doc._id.toString()
+    };
+  }
+  return doc;
+}
+
+function convertDocuments<T extends { _id?: any }>(docs: T[]): T[] {
+  return docs.map(convertDocument);
+}
 
 export interface IStorage {
   // User operations
@@ -66,191 +76,311 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      return undefined;
+    }
+    
+    const db = await connectToDatabase();
+    const user = await db.collection<User>('users').findOne({ _id: new ObjectId(id) } as any);
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    const db = await connectToDatabase();
+    const user = await db.collection<User>('users').findOne({ email });
+    return user || undefined;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(userData).returning();
-    return user;
+    const db = await connectToDatabase();
+    const now = new Date();
+    const userToInsert = {
+      ...userData,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    const result = await db.collection<User>('users').insertOne(userToInsert as User);
+    const user = await db.collection<User>('users').findOne({ _id: result.insertedId });
+    return user!;
   }
 
   async updateUser(id: string, userData: Partial<InsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({ ...userData, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return user;
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      throw new Error('Invalid user ID');
+    }
+    
+    const db = await connectToDatabase();
+    const updateData = {
+      ...userData,
+      updatedAt: new Date(),
+    };
+    
+    await db.collection<User>('users').updateOne(
+      { _id: new ObjectId(id) } as any,
+      { $set: updateData }
+    );
+    
+    const user = await db.collection<User>('users').findOne({ _id: new ObjectId(id) } as any);
+    return user!;
   }
 
   // News operations
   async getNews(): Promise<News[]> {
-    return await db.select().from(news).orderBy(desc(news.createdAt));
+    const db = await connectToDatabase();
+    const news = await db.collection<News>('news')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+    return convertDocuments(news);
   }
 
   async getFeaturedNews(): Promise<News[]> {
-    return await db
-      .select()
-      .from(news)
-      .where(eq(news.featured, true))
-      .orderBy(desc(news.createdAt))
-      .limit(6);
+    const db = await connectToDatabase();
+    const news = await db.collection<News>('news')
+      .find({ featured: true })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
+    return convertDocuments(news);
   }
 
   async getNewsById(id: string): Promise<News | undefined> {
-    const [newsItem] = await db.select().from(news).where(eq(news.id, id));
-    return newsItem;
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      return undefined;
+    }
+    
+    const db = await connectToDatabase();
+    const news = await db.collection<News>('news').findOne({ _id: new ObjectId(id) } as any);
+    return news ? convertDocument(news) : undefined;
   }
 
   async getNewsByLocation(state?: string, municipality?: string): Promise<News[]> {
-    let conditions = [];
+    const db = await connectToDatabase();
+    const filter: any = {};
     
     if (state) {
-      conditions.push(eq(news.state, state));
+      filter.state = state;
     }
     if (municipality) {
-      conditions.push(eq(news.municipality, municipality));
+      filter.municipality = municipality;
     }
     
-    if (conditions.length > 0) {
-      return await db
-        .select()
-        .from(news)
-        .where(conditions.length === 1 ? conditions[0] : and(...conditions))
-        .orderBy(desc(news.createdAt));
-    }
-    
-    return await db.select().from(news).orderBy(desc(news.createdAt));
+    return await db.collection<News>('news')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .toArray();
   }
 
   async createNews(newsData: InsertNews): Promise<News> {
-    const [newsItem] = await db.insert(news).values(newsData).returning();
-    return newsItem;
+    const db = await connectToDatabase();
+    const now = new Date();
+    const newsToInsert = {
+      ...newsData,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    const result = await db.collection<News>('news').insertOne(newsToInsert as News);
+    const news = await db.collection<News>('news').findOne({ _id: result.insertedId });
+    return news!;
   }
 
   async updateNews(id: string, newsData: Partial<InsertNews>): Promise<News> {
-    const [newsItem] = await db
-      .update(news)
-      .set({ ...newsData, updatedAt: new Date() })
-      .where(eq(news.id, id))
-      .returning();
-    return newsItem;
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      throw new Error('Invalid news ID');
+    }
+    
+    const db = await connectToDatabase();
+    const updateData = {
+      ...newsData,
+      updatedAt: new Date(),
+    };
+    
+    await db.collection<News>('news').updateOne(
+      { _id: new ObjectId(id) } as any,
+      { $set: updateData }
+    );
+    
+    const news = await db.collection<News>('news').findOne({ _id: new ObjectId(id) } as any);
+    return convertDocument(news!);
   }
 
   async deleteNews(id: string): Promise<void> {
-    await db.delete(news).where(eq(news.id, id));
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      throw new Error('Invalid news ID');
+    }
+    
+    const db = await connectToDatabase();
+    await db.collection<News>('news').deleteOne({ _id: new ObjectId(id) } as any);
   }
 
   // Comment operations
   async getCommentsByNewsId(newsId: string): Promise<Comment[]> {
-    return await db
-      .select()
-      .from(comments)
-      .where(eq(comments.newsId, newsId))
-      .orderBy(desc(comments.createdAt));
+    const db = await connectToDatabase();
+    return await db.collection<Comment>('comments')
+      .find({ newsId })
+      .sort({ createdAt: -1 })
+      .toArray();
   }
 
   async getApprovedCommentsByNewsId(newsId: string): Promise<Comment[]> {
-    return await db
-      .select()
-      .from(comments)
-      .where(and(eq(comments.newsId, newsId), eq(comments.approved, true)))
-      .orderBy(desc(comments.createdAt));
+    const db = await connectToDatabase();
+    return await db.collection<Comment>('comments')
+      .find({ newsId, approved: true })
+      .sort({ createdAt: -1 })
+      .toArray();
   }
 
   async getPendingComments(): Promise<Comment[]> {
-    return await db
-      .select()
-      .from(comments)
-      .where(eq(comments.approved, false))
-      .orderBy(desc(comments.createdAt));
+    const db = await connectToDatabase();
+    return await db.collection<Comment>('comments')
+      .find({ approved: false })
+      .sort({ createdAt: -1 })
+      .toArray();
   }
 
   async createComment(commentData: InsertComment): Promise<Comment> {
-    const [comment] = await db.insert(comments).values(commentData).returning();
-    return comment;
+    const db = await connectToDatabase();
+    const now = new Date();
+    const commentToInsert = {
+      ...commentData,
+      approved: false,
+      createdAt: now,
+    };
+    
+    const result = await db.collection<Comment>('comments').insertOne(commentToInsert as Comment);
+    const comment = await db.collection<Comment>('comments').findOne({ _id: result.insertedId });
+    return comment!;
   }
 
   async approveComment(id: string): Promise<Comment> {
-    const [comment] = await db
-      .update(comments)
-      .set({ approved: true })
-      .where(eq(comments.id, id))
-      .returning();
-    return comment;
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      throw new Error('Invalid comment ID');
+    }
+    
+    const db = await connectToDatabase();
+    await db.collection<Comment>('comments').updateOne(
+      { _id: new ObjectId(id) } as any,
+      { $set: { approved: true } }
+    );
+    
+    const comment = await db.collection<Comment>('comments').findOne({ _id: new ObjectId(id) } as any);
+    return comment!;
   }
 
   async deleteComment(id: string): Promise<void> {
-    await db.delete(comments).where(eq(comments.id, id));
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      throw new Error('Invalid comment ID');
+    }
+    
+    const db = await connectToDatabase();
+    await db.collection<Comment>('comments').deleteOne({ _id: new ObjectId(id) } as any);
   }
 
   // Request operations
   async getRequests(): Promise<Request[]> {
-    return await db.select().from(requests).orderBy(desc(requests.createdAt));
+    const db = await connectToDatabase();
+    const requests = await db.collection<Request>('requests')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+    return convertDocuments(requests);
   }
 
   async getRequestsByPolitician(politicianId: string): Promise<Request[]> {
-    return await db
-      .select()
-      .from(requests)
-      .where(eq(requests.politicianId, politicianId))
-      .orderBy(desc(requests.createdAt));
+    const db = await connectToDatabase();
+    const requests = await db.collection<Request>('requests')
+      .find({ politicianId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    return convertDocuments(requests);
   }
 
   async getRequestsByLocation(state: string, municipality?: string): Promise<Request[]> {
-    let conditions = [eq(requests.state, state)];
+    const db = await connectToDatabase();
+    const filter: any = { state };
     
     if (municipality) {
-      conditions.push(eq(requests.municipality, municipality));
+      filter.municipality = municipality;
     }
     
-    return await db
-      .select()
-      .from(requests)
-      .where(conditions.length === 1 ? conditions[0] : and(...conditions))
-      .orderBy(desc(requests.createdAt));
+    const requests = await db.collection<Request>('requests')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .toArray();
+    return convertDocuments(requests);
   }
 
   async createRequest(requestData: InsertRequest): Promise<Request> {
-    const [request] = await db.insert(requests).values(requestData).returning();
-    return request;
+    const db = await connectToDatabase();
+    const now = new Date();
+    const requestToInsert = {
+      ...requestData,
+      status: "pending" as const,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    const result = await db.collection<Request>('requests').insertOne(requestToInsert as Request);
+    const request = await db.collection<Request>('requests').findOne({ _id: result.insertedId });
+    return request!;
   }
 
   async updateRequestStatus(id: string, status: string, response?: string): Promise<Request> {
-    const [request] = await db
-      .update(requests)
-      .set({ status: status as any, response, updatedAt: new Date() })
-      .where(eq(requests.id, id))
-      .returning();
-    return request;
+    if (!id || id === 'undefined' || !ObjectId.isValid(id)) {
+      throw new Error('Invalid request ID');
+    }
+    
+    const db = await connectToDatabase();
+    const updateData: any = {
+      status,
+      updatedAt: new Date(),
+    };
+    
+    if (response) {
+      updateData.response = response;
+    }
+    
+    await db.collection<Request>('requests').updateOne(
+      { _id: new ObjectId(id) } as any,
+      { $set: updateData }
+    );
+    
+    const request = await db.collection<Request>('requests').findOne({ _id: new ObjectId(id) } as any);
+    return convertDocument(request!);
   }
 
   // Location operations
   async getStates(): Promise<State[]> {
-    return await db.select().from(states).orderBy(states.name);
+    const db = await connectToDatabase();
+    return await db.collection<State>('states').find({}).toArray();
   }
 
   async getMunicipalitiesByState(stateId: string): Promise<Municipality[]> {
-    return await db
-      .select()
-      .from(municipalities)
-      .where(eq(municipalities.stateId, stateId))
-      .orderBy(municipalities.name);
+    const db = await connectToDatabase();
+    return await db.collection<Municipality>('municipalities')
+      .find({ stateId })
+      .toArray();
   }
 
   async createMunicipality(municipalityData: { id: string; name: string; stateId: string }): Promise<Municipality> {
-    const [municipality] = await db
-      .insert(municipalities)
-      .values(municipalityData)
-      .onConflictDoNothing()
-      .returning();
-    return municipality;
+    const db = await connectToDatabase();
+    const municipalityToInsert = {
+      _id: municipalityData.id,
+      name: municipalityData.name,
+      stateId: municipalityData.stateId,
+    };
+    
+    // Use upsert to avoid duplicates
+    await db.collection<Municipality>('municipalities').replaceOne(
+      { _id: municipalityData.id },
+      municipalityToInsert as Municipality,
+      { upsert: true }
+    );
+    
+    const municipality = await db.collection<Municipality>('municipalities').findOne({ _id: municipalityData.id });
+    return municipality!;
   }
 
   // Statistics
@@ -260,26 +390,21 @@ export class DatabaseStorage implements IStorage {
     politiciansCount: number;
     responseRate: number;
   }> {
-    const [newsCount] = await db.select({ count: count() }).from(news);
-    const [requestsCount] = await db.select({ count: count() }).from(requests);
-    const [politiciansCount] = await db
-      .select({ count: count() })
-      .from(users)
-      .where(eq(users.type, "politician"));
+    const db = await connectToDatabase();
     
-    const [resolvedCount] = await db
-      .select({ count: count() })
-      .from(requests)
-      .where(eq(requests.status, "resolved"));
+    const [newsCount, requestsCount, politiciansCount, resolvedRequests] = await Promise.all([
+      db.collection('news').countDocuments(),
+      db.collection('requests').countDocuments(),
+      db.collection('users').countDocuments({ type: 'politician' }),
+      db.collection('requests').countDocuments({ status: 'resolved' }),
+    ]);
     
-    const responseRate = requestsCount.count > 0 
-      ? Math.round((resolvedCount.count / requestsCount.count) * 100)
-      : 0;
-
+    const responseRate = requestsCount > 0 ? (resolvedRequests / requestsCount) * 100 : 0;
+    
     return {
-      newsCount: newsCount.count,
-      requestsCount: requestsCount.count,
-      politiciansCount: politiciansCount.count,
+      newsCount,
+      requestsCount,
+      politiciansCount,
       responseRate,
     };
   }

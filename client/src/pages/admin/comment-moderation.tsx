@@ -14,7 +14,7 @@ export default function CommentModeration() {
   const queryClient = useQueryClient();
 
   // Fetch pending comments
-  const { data: pendingComments = [], isLoading } = useQuery({
+  const { data: pendingComments = [], isLoading } = useQuery<Comment[]>({
     queryKey: ["/api/comments/pending"],
   });
 
@@ -164,7 +164,7 @@ export default function CommentModeration() {
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApproveComment(comment.id)}
+                        onClick={() => handleApproveComment(comment.id!)}
                         disabled={approveMutation.isPending}
                       >
                         <CheckCircle size={14} className="mr-1" />
@@ -173,7 +173,7 @@ export default function CommentModeration() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleRejectComment(comment.id)}
+                        onClick={() => handleRejectComment(comment.id!)}
                         disabled={deleteMutation.isPending}
                       >
                         <XCircle size={14} className="mr-1" />

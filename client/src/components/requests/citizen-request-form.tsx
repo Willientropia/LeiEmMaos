@@ -171,7 +171,7 @@ export default function CitizenRequestForm() {
                       </FormControl>
                       <SelectContent>
                         {municipalities.map((municipality: any) => (
-                          <SelectItem key={municipality.id} value={municipality.name}>
+                          <SelectItem key={municipality.id || municipality.name} value={municipality.name}>
                             {municipality.name}
                           </SelectItem>
                         ))}

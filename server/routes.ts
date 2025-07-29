@@ -208,7 +208,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to get from database first
       const localStates = await storage.getStates();
       if (localStates.length > 0) {
-        return res.json(localStates);
+        // Convert _id to id for frontend compatibility
+        const formattedStates = localStates.map(state => ({
+          id: state._id,
+          name: state.name
+        }));
+        return res.json(formattedStates);
       }
 
       // Fallback to IBGE API if no local data

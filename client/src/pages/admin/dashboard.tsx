@@ -14,15 +14,20 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react";
+import type { Comment } from "@shared/schema";
 
 export default function AdminDashboard() {
   // Fetch statistics
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<{
+    newsCount: number;
+    requestsCount: number;
+    responseRate: number;
+  }>({
     queryKey: ["/api/stats"],
   });
 
   // Fetch pending comments count
-  const { data: pendingComments = [] } = useQuery({
+  const { data: pendingComments = [] } = useQuery<Comment[]>({
     queryKey: ["/api/comments/pending"],
   });
 

@@ -68,7 +68,7 @@ export default function PoliticianDashboard() {
   const politicianMunicipality = "São Paulo"; // This should come from auth
 
   // Fetch requests for politician's region
-  const { data: requests = [], isLoading } = useQuery({
+  const { data: requests = [], isLoading } = useQuery<Request[]>({
     queryKey: ["/api/requests", { state: politicianState, municipality: politicianMunicipality }],
   });
 
@@ -105,7 +105,7 @@ export default function PoliticianDashboard() {
     if (!selectedRequest) return;
     
     updateStatusMutation.mutate({
-      id: selectedRequest.id,
+      id: selectedRequest.id!,
       status: selectedStatus,
       response: responseText.trim() || undefined,
     });

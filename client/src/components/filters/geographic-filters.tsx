@@ -43,7 +43,7 @@ export default function GeographicFilters({
             <SelectValue placeholder="Selecione o Estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os Estados</SelectItem>
+            <SelectItem key="all" value="all">Todos os Estados</SelectItem>
             {states.map((state: any) => (
               <SelectItem key={state.id} value={state.id}>
                 {state.name}
@@ -61,9 +61,9 @@ export default function GeographicFilters({
             <SelectValue placeholder="Selecione o Município" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os Municípios</SelectItem>
+            <SelectItem key="all" value="all">Todos os Municípios</SelectItem>
             {municipalities.map((municipality: any) => (
-              <SelectItem key={municipality.id} value={municipality.name}>
+              <SelectItem key={municipality.id || municipality.name} value={municipality.name}>
                 {municipality.name}
               </SelectItem>
             ))}

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Calendar, User } from "lucide-react";
-import type { Comment } from "@shared/schema";
+import type { Comment, News } from "@shared/schema";
 
 export default function NewsDetail() {
   const [, params] = useRoute("/news/:id");

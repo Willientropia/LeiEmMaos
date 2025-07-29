@@ -1,176 +1,125 @@
-import { sql } from "drizzle-orm";
-import { relations } from "drizzle-orm";
-import {
-  pgTable,
-  text,
-  varchar,
-  boolean,
-  timestamp,
-  integer,
-  pgEnum,
-} from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { ObjectId } from "mongodb";
 
 // User types enum
-export const userTypeEnum = pgEnum("user_type", ["admin", "politician", "visitor"]);
+export const userTypeEnum = ["admin", "politician", "visitor"] as const;
 
 // Request status enum
-export const requestStatusEnum = pgEnum("request_status", ["pending", "in_progress", "resolved", "rejected"]);
+export const requestStatusEnum = ["pending", "in_progress", "resolved", "rejected"] as const;
 
 // Request type enum
-export const requestTypeEnum = pgEnum("request_type", [
+export const requestTypeEnum = [
   "infraestrutura",
   "saude", 
   "educacao",
   "seguranca",
   "meio-ambiente",
   "outro"
-]);
+] as const;
 
-// Users table
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  password: text("password"),
-  name: text("name").notNull(),
-  type: userTypeEnum("type").notNull().default("visitor"),
-  state: varchar("state", { length: 2 }),
-  municipality: text("municipality"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+// Base interface for MongoDB documents
+export interface BaseDocument {
+  _id?: string; // Changed to string for frontend compatibility
+  id?: string; // Alias for _id for frontend compatibility
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// User interface
+export interface User extends BaseDocument {
+  email?: string;
+  password?: string;
+  name: string;
+  type: typeof userTypeEnum[number];
+  state?: string;
+  municipality?: string;
+}
+
+// State interface
+export interface State {
+  _id: string; // 2-letter state code
+  name: string;
+}
+
+// Municipality interface
+export interface Municipality extends BaseDocument {
+  name: string;
+  stateId: string;
+}
+
+// News interface
+export interface News extends BaseDocument {
+  title: string;
+  content: string;
+  summary: string;
+  imageUrl?: string;
+  featured?: boolean;
+  state?: string;
+  municipality?: string;
+  category: string;
+  authorId: string;
+}
+
+// Comment interface
+export interface Comment extends BaseDocument {
+  newsId: string;
+  name: string;
+  content: string;
+  approved?: boolean;
+}
+
+// Request interface
+export interface Request extends BaseDocument {
+  name: string;
+  email: string;
+  state: string;
+  municipality: string;
+  type: typeof requestTypeEnum[number];
+  message: string;
+  status?: typeof requestStatusEnum[number];
+  politicianId?: string;
+  response?: string;
+}
+
+// Zod schemas for validation
+export const insertUserSchema = z.object({
+  email: z.string().email().optional(),
+  password: z.string().optional(),
+  name: z.string().min(1),
+  type: z.enum(userTypeEnum).default("visitor"),
+  state: z.string().length(2).optional(),
+  municipality: z.string().optional(),
 });
 
-// States table
-export const states = pgTable("states", {
-  id: varchar("id", { length: 2 }).primaryKey(),
-  name: text("name").notNull(),
+export const insertNewsSchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+  summary: z.string().min(1),
+  imageUrl: z.string().url().optional(),
+  featured: z.boolean().default(false),
+  state: z.string().length(2).optional(),
+  municipality: z.string().optional(),
+  category: z.string().min(1),
+  authorId: z.string().min(1),
 });
 
-// Municipalities table
-export const municipalities = pgTable("municipalities", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  stateId: varchar("state_id", { length: 2 }).notNull(),
+export const insertCommentSchema = z.object({
+  newsId: z.string().min(1),
+  name: z.string().min(1),
+  content: z.string().min(1),
 });
 
-// News table
-export const news = pgTable("news", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  summary: text("summary").notNull(),
-  imageUrl: text("image_url"),
-  featured: boolean("featured").default(false),
-  state: varchar("state", { length: 2 }),
-  municipality: text("municipality"),
-  category: text("category").notNull(),
-  authorId: varchar("author_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Comments table
-export const comments = pgTable("comments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  newsId: varchar("news_id").notNull(),
-  name: text("name").notNull(),
-  content: text("content").notNull(),
-  approved: boolean("approved").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Requests table
-export const requests = pgTable("requests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  state: varchar("state", { length: 2 }).notNull(),
-  municipality: text("municipality").notNull(),
-  type: requestTypeEnum("type").notNull(),
-  message: text("message").notNull(),
-  status: requestStatusEnum("status").default("pending"),
-  politicianId: varchar("politician_id"),
-  response: text("response"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  news: many(news),
-  requests: many(requests),
-}));
-
-export const statesRelations = relations(states, ({ many }) => ({
-  municipalities: many(municipalities),
-}));
-
-export const municipalitiesRelations = relations(municipalities, ({ one }) => ({
-  state: one(states, {
-    fields: [municipalities.stateId],
-    references: [states.id],
-  }),
-}));
-
-export const newsRelations = relations(news, ({ one, many }) => ({
-  author: one(users, {
-    fields: [news.authorId],
-    references: [users.id],
-  }),
-  comments: many(comments),
-}));
-
-export const commentsRelations = relations(comments, ({ one }) => ({
-  news: one(news, {
-    fields: [comments.newsId],
-    references: [news.id],
-  }),
-}));
-
-export const requestsRelations = relations(requests, ({ one }) => ({
-  politician: one(users, {
-    fields: [requests.politicianId],
-    references: [users.id],
-  }),
-}));
-
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertNewsSchema = createInsertSchema(news).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCommentSchema = createInsertSchema(comments).omit({
-  id: true,
-  createdAt: true,
-  approved: true,
-});
-
-export const insertRequestSchema = createInsertSchema(requests).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  status: true,
-  politicianId: true,
-  response: true,
+export const insertRequestSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  state: z.string().length(2),
+  municipality: z.string().min(1),
+  type: z.enum(requestTypeEnum),
+  message: z.string().min(1),
 });
 
 // Types
-export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type News = typeof news.$inferSelect;
 export type InsertNews = z.infer<typeof insertNewsSchema>;
-export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
-export type Request = typeof requests.$inferSelect;
 export type InsertRequest = z.infer<typeof insertRequestSchema>;
-export type State = typeof states.$inferSelect;
-export type Municipality = typeof municipalities.$inferSelect;

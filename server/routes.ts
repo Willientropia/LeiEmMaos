@@ -202,10 +202,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Location routes
+  // Location routes - Using IBGE API
   app.get("/api/states", async (req, res) => {
     try {
-      const states = await storage.getStates();
+      // Try to get from database first
+      const localStates = await storage.getStates();
+      if (localStates.length > 0) {
+        return res.json(localStates);
+      }
+
+      // Fallback to IBGE API if no local data
+      console.log("Fetching states from IBGE API...");
+      const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+      
+      if (!response.ok) {
+        throw new Error(`IBGE API error: ${response.status}`);
+      }
+      
+      const ibgeStates = await response.json();
+      
+      const states = ibgeStates.map((state: any) => ({
+        id: state.sigla,
+        name: state.nome
+      }));
+      
       res.json(states);
     } catch (error) {
       console.error("Error fetching states:", error);
@@ -216,11 +236,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/states/:stateId/municipalities", async (req, res) => {
     try {
       const { stateId } = req.params;
-      const municipalities = await storage.getMunicipalitiesByState(stateId);
+      
+      // Always fetch from IBGE API for fresh data
+      console.log(`Fetching municipalities for ${stateId} from IBGE API...`);
+      const url = `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${stateId}/municipios?orderBy=nome`;
+      console.log(`IBGE URL: ${url}`);
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Lei Em Maos/1.0'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`IBGE API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const responseText = await response.text();
+      console.log(`IBGE Response length: ${responseText.length}`);
+      
+      if (!responseText.trim()) {
+        throw new Error('Empty response from IBGE API');
+      }
+      
+      const ibgeMunicipalities = JSON.parse(responseText);
+      
+      const municipalities = ibgeMunicipalities.map((municipality: any) => ({
+        id: municipality.id.toString(),
+        name: municipality.nome,
+        stateId: stateId
+      }));
+      
       res.json(municipalities);
     } catch (error) {
       console.error("Error fetching municipalities:", error);
-      res.status(500).json({ message: "Failed to fetch municipalities" });
+      // Fallback to local data if IBGE API fails
+      try {
+        const { stateId } = req.params;
+        const localMunicipalities = await storage.getMunicipalitiesByState(stateId);
+        res.json(localMunicipalities);
+      } catch (localError) {
+        res.status(500).json({ message: "Failed to fetch municipalities" });
+      }
+    }
+  });
+
+  // Endpoint to populate municipalities from IBGE
+  app.post("/api/populate-municipalities/:stateId", async (req, res) => {
+    try {
+      const { stateId } = req.params;
+      
+      console.log(`Populating municipalities for ${stateId} from IBGE API...`);
+      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${stateId}/municipios?orderBy=nome`);
+      
+      if (!response.ok) {
+        throw new Error(`IBGE API error: ${response.status}`);
+      }
+      
+      const ibgeMunicipalities = await response.json();
+      
+      // Save to database
+      for (const municipality of ibgeMunicipalities) {
+        await storage.createMunicipality({
+          id: municipality.id.toString(),
+          name: municipality.nome,
+          stateId: stateId
+        });
+      }
+      
+      res.json({ 
+        message: `Successfully populated ${ibgeMunicipalities.length} municipalities for ${stateId}`,
+        count: ibgeMunicipalities.length 
+      });
+    } catch (error) {
+      console.error("Error populating municipalities:", error);
+      res.status(500).json({ message: "Failed to populate municipalities" });
     }
   });
 

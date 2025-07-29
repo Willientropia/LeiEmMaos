@@ -244,6 +244,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(municipalities.name);
   }
 
+  async createMunicipality(municipalityData: { id: string; name: string; stateId: string }): Promise<Municipality> {
+    const [municipality] = await db
+      .insert(municipalities)
+      .values(municipalityData)
+      .onConflictDoNothing()
+      .returning();
+    return municipality;
+  }
+
   // Statistics
   async getStats(): Promise<{
     newsCount: number;

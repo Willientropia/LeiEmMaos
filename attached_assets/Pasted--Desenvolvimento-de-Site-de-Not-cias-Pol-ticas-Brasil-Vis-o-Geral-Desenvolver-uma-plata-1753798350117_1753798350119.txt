@@ -1,0 +1,125 @@
+# Desenvolvimento de Site de Notícias Políticas - Brasil
+
+## 📋 Visão Geral
+Desenvolver uma plataforma web completa de notícias políticas focada no Brasil, com sistema de aproximação entre cidadãos e políticos eleitos.
+
+## 🛠️ Stack Tecnológico
+- **Backend**: Node.js
+- **Frontend**: React.js
+- **Banco de Dados**: A definir (sugestão: PostgreSQL ou MongoDB)
+
+## 🎯 Funcionalidades Principais
+
+### 1. Página Inicial
+- **Notícias em destaque**: Cards com prévia das notícias (título, imagem, resumo)
+- **Sistema de solicitações**: Formulário no final da página para cidadãos enviarem solicitações aos políticos locais
+- **Filtros por localização**: Estado e município
+- **Layout responsivo**
+
+### 2. Página Individual de Notícia
+- **Conteúdo completo** da notícia (abrir em nova aba/página)
+- **Sistema de comentários**:
+  - Formulário: Nome + Comentário
+  - Comentários ficam pendentes de aprovação
+  - Exibição de comentários aprovados
+
+### 3. Dashboard Administrativo
+- **Autenticação**: Login seguro para administradores
+- **Gestão de notícias**:
+  - Criar, editar, excluir notícias
+  - Upload de imagens
+  - Sistema de destaque para homepage
+- **Moderação de comentários**:
+  - Aprovar/reprovar comentários
+  - Visualizar comentários pendentes
+- **Gestão de usuários** (políticos e administradores)
+
+### 4. Portal do Político
+- **Autenticação específica** para políticos
+- **Visualização de solicitações**:
+  - Filtrar por município/estado de atuação
+  - Marcar como resolvido/em andamento
+  - Responder solicitações
+- **Perfil político**: Informações básicas e área de atuação
+
+## 🗺️ Estrutura Geográfica
+
+### Organização por Localização
+- **Estados**: Lista completa dos 26 estados + DF
+- **Municípios**: Estrutura preparada para todos os municípios brasileiros
+- **Políticos por região**: Associação de políticos aos seus municípios/estados
+- **Solicitações geolocalizadas**: Direcionamento automático baseado na localização
+
+### Preparação para APIs Futuras
+- **Estrutura de dados flexível** para integração com APIs governamentais
+- **Sistema de cache** para otimizar consultas geográficas
+- **Endpoints preparados** para receber dados externos (IBGE, TSE, etc.)
+
+## 📱 Requisitos Técnicos
+
+### Frontend (React.js)
+- **Roteamento**: React Router para navegação
+- **Estado global**: Context API ou Redux
+- **Componentes reutilizáveis**:
+  - Card de notícia
+  - Formulário de comentário
+  - Filtros geográficos
+  - Sistema de autenticação
+- **Responsividade**: Mobile-first design
+
+### Backend (Node.js)
+- **Framework**: Express.js
+- **Autenticação**: JWT tokens
+- **API RESTful** com endpoints para:
+  - Notícias (CRUD)
+  - Comentários (CRUD + moderação)
+  - Solicitações (CRUD)
+  - Usuários/Políticos (autenticação e perfis)
+  - Dados geográficos (estados/municípios)
+- **Upload de arquivos**: Multer para imagens
+- **Validação**: Express-validator
+
+### Banco de Dados
+- **Tabelas principais**:
+  - `noticias` (id, título, conteúdo, imagem, destaque, data_criacao)
+  - `comentarios` (id, noticia_id, nome, comentario, aprovado, data_criacao)
+  - `solicitacoes` (id, nome, email, mensagem, estado, município, político_id, status)
+  - `usuarios` (id, nome, email, senha, tipo, estado, município)
+  - `estados` (id, nome, sigla)
+  - `municipios` (id, nome, estado_id)
+
+## 🔐 Níveis de Acesso
+1. **Visitante**: Visualizar notícias, comentar, fazer solicitações
+2. **Administrador**: Gestão completa do sistema
+3. **Político**: Acesso às solicitações da sua região
+
+## 🎨 Interface e UX
+- **Design clean e profissional**
+- **Cores**: Paleta que remeta à seriedade política (azul, branco, cinza)
+- **Navegação intuitiva**
+- **Carregamento otimizado**
+- **Acessibilidade**: Padrões WCAG
+
+## 📋 Entregáveis Esperados
+1. **Código fonte completo** (frontend + backend)
+2. **Documentação de instalação e configuração**
+3. **Estrutura do banco de dados** com scripts de criação
+4. **Instruções de deploy**
+5. **Documentação da API** (endpoints e parâmetros)
+
+## 🚀 Funcionalidades Futuras (Preparar estrutura)
+- Integração com APIs governamentais
+- Sistema de notificações em tempo real
+- Newsletter automática
+- Analytics de engajamento
+- Sistema de denúncias
+- Integração com redes sociais
+
+## ⚠️ Considerações Importantes
+- **Segurança**: Validação rigorosa de dados, proteção contra XSS e CSRF
+- **Performance**: Otimização para carregamento rápido
+- **SEO**: Meta tags e estrutura amigável para buscadores
+- **Backup**: Sistema de backup automático dos dados
+- **Logs**: Sistema de auditoria para ações administrativas
+
+Por favor, implemente esta solução de forma modular e bem documentada, considerando as melhores práticas de desenvolvimento web e segurança.
